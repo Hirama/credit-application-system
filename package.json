@@ -1,0 +1,28 @@
+{
+  "name": "credit-application-system",
+  "version": "1.0.0",
+  "description": "Applications on micro-loans",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^2.4.0",
+    "truffle": "^5.1.4",
+    "truffle-assertions": "^0.9.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirama/credit-application-system.git"
+  },
+  "author": "Andrey Zolin",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hirama/credit-application-system/issues"
+  },
+  "homepage": "https://github.com/Hirama/credit-application-system#readme"
+}
