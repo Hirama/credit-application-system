@@ -1,8 +1,9 @@
 pragma solidity ^0.5.12;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/GSN/GSNRecipient.sol";
 
-contract MicroLoan is Ownable {
+contract MicroLoan is GSNRecipient, Ownable {
 
     // borrower address => (loan hash => amount of ethers)
     mapping(address => mapping(bytes32 => uint256)) public loans;
@@ -15,7 +16,7 @@ contract MicroLoan is Ownable {
     }
 
     constructor () public {
-
+        // solium-disable-previous-line no-empty-blocks
     }
 
     event AddNewLoanRequest (
@@ -51,12 +52,12 @@ contract MicroLoan is Ownable {
      */
     function loanRequest(uint256 amount) public returns (bool) {
         // generate new loan id based on borrower address, amount and contract state
-        bytes32 loanHash = keccak256(abi.encodePacked(msg.sender, amount, this));
-        loans[msg.sender][loanHash] = amount;
+        bytes32 loanHash = keccak256(abi.encodePacked(_msgSender(), amount, this));
+        loans[_msgSender()][loanHash] = amount;
         // store requested amount of ethers
-        requestedLoans[loanHash].borrower = msg.sender;
+        requestedLoans[loanHash].borrower = _msgSender();
         // map loan id to the borrower address
-        emit AddNewLoanRequest(msg.sender, amount, loanHash);
+        emit AddNewLoanRequest(_msgSender(), amount, loanHash);
         return true;
     }
 
@@ -65,15 +66,15 @@ contract MicroLoan is Ownable {
      * @return true if data was stored
      */
     function loanAccept(bytes32 loanID) public {
-        require(requestedLoans[loanID].borrower == msg.sender, "Sender should be predefined");
-        require(requestedLoans[loanID].isApproved, "Loan should be approved");
-        uint256 withdrawAmount = loans[msg.sender][loanID];
+        require(requestedLoans[loanID].borrower == _msgSender(), "MicroLoan: sender should be predefined");
+        require(requestedLoans[loanID].isApproved, "MicroLoan: loan should be approved");
+        uint256 withdrawAmount = loans[_msgSender()][loanID];
         // prevent re-entrancy attacks
         delete requestedLoans[loanID];
-        delete loans[msg.sender][loanID];
+        delete loans[_msgSender()][loanID];
         // withdraw money
-        emit RequestAccepted(msg.sender, withdrawAmount, loanID);
-        return msg.sender.transfer(withdrawAmount);
+        emit RequestAccepted(_msgSender(), withdrawAmount, loanID);
+        return _msgSender().transfer(withdrawAmount);
     }
 
     /**
@@ -81,8 +82,8 @@ contract MicroLoan is Ownable {
      * @return true if data was stored
      */
     function loanClose(bytes32 loanID) public {
-        require(requestedLoans[loanID].borrower == msg.sender, "Sender should be borrower");
-        _closeRequest(loanID, msg.sender);
+        require(requestedLoans[loanID].borrower == _msgSender(), "MicroLoan: sender should be borrower");
+        _closeRequest(loanID, _msgSender());
         emit RequestClosed(loanID);
     }
 
@@ -92,8 +93,8 @@ contract MicroLoan is Ownable {
      */
     function approveRequest(bytes32 loanID) public onlyOwner payable {
         address borrower = requestedLoans[loanID].borrower;
-        require(borrower != address(0), "Borrower address should be initialized");
-        require(msg.value > 0, "Amount should be non zero value");
+        require(borrower != address(0), "MicroLoan: borrower address should be initialized");
+        require(msg.value > 0, "MicroLoan: amount should be non zero value");
 
         loans[borrower][loanID] = msg.value;
         requestedLoans[loanID] = Loan({borrower : borrower, isApproved : true});
@@ -107,7 +108,7 @@ contract MicroLoan is Ownable {
      */
     function declineRequest(bytes32 loanID) public onlyOwner {
         address borrower = requestedLoans[loanID].borrower;
-        require(borrower != address(0), "Borrower address should be initialized");
+        require(borrower != address(0), "MicroLoan: borrower address should be initialized");
 
         _closeRequest(loanID, borrower);
 
@@ -128,5 +129,31 @@ contract MicroLoan is Ownable {
             address payable owner = address(uint160(owner()));
             owner.transfer(requestedAmount);
         }
+    }
+
+    function acceptRelayedCall(
+        address relay,
+        address from,
+        bytes calldata encodedFunction,
+        uint256 transactionFee,
+        uint256 gasPrice,
+        uint256 gasLimit,
+        uint256 nonce,
+        bytes calldata approvalData,
+        uint256 maxPossibleCharge
+    ) external view returns (uint256, bytes memory) {
+        return _approveRelayedCall();
+    }
+
+    function _preRelayedCall(bytes memory context) internal returns (bytes32) {
+        return bytes32(uint(1));
+    }
+
+    function _postRelayedCall(bytes memory context, bool, uint256 actualCharge, bytes32) internal {
+        // solium-disable-previous-line no-empty-blocks
+    }
+
+    function getRecipientBalance() public view returns (uint) {
+        return IRelayHub(getHubAddr()).balanceOf(address(this));
     }
 }
