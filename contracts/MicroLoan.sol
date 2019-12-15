@@ -65,8 +65,8 @@ contract MicroLoan is Ownable {
      * @return true if data was stored
      */
     function loanAccept(bytes32 loanID) public {
-        require(requestedLoans[loanID].borrower == msg.sender);
-        require(requestedLoans[loanID].isApproved);
+        require(requestedLoans[loanID].borrower == msg.sender, "Sender should be predefined");
+        require(requestedLoans[loanID].isApproved, "Loan should be approved");
         uint256 withdrawAmount = loans[msg.sender][loanID];
         // prevent re-entrancy attacks
         delete requestedLoans[loanID];
@@ -81,7 +81,7 @@ contract MicroLoan is Ownable {
      * @return true if data was stored
      */
     function loanClose(bytes32 loanID) public {
-        require(requestedLoans[loanID].borrower == msg.sender);
+        require(requestedLoans[loanID].borrower == msg.sender, "Sender should be borrower");
         _closeRequest(loanID, msg.sender);
         emit RequestClosed(loanID);
     }
@@ -92,8 +92,8 @@ contract MicroLoan is Ownable {
      */
     function approveRequest(bytes32 loanID) public onlyOwner payable {
         address borrower = requestedLoans[loanID].borrower;
-        require(borrower != address(0));
-        require(msg.value > 0);
+        require(borrower != address(0), "Borrower address should be initialized");
+        require(msg.value > 0, "Amount should be non zero value");
 
         loans[borrower][loanID] = msg.value;
         requestedLoans[loanID] = Loan({borrower : borrower, isApproved : true});
@@ -107,7 +107,7 @@ contract MicroLoan is Ownable {
      */
     function declineRequest(bytes32 loanID) public onlyOwner {
         address borrower = requestedLoans[loanID].borrower;
-        require(borrower != address(0));
+        require(borrower != address(0), "Borrower address should be initialized");
 
         _closeRequest(loanID, borrower);
 
@@ -129,5 +129,4 @@ contract MicroLoan is Ownable {
             owner.transfer(requestedAmount);
         }
     }
-
 }

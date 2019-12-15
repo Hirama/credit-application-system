@@ -9,12 +9,14 @@
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0",
     "ganache-cli": "^6.7.0",
+    "solium": "^1.2.5",
     "truffle": "^5.1.4",
     "truffle-assertions": "^0.9.2"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "truffle test"
+    "test": "truffle test",
+    "lint": "solium -d ./contracts/"
   },
   "repository": {
     "type": "git",

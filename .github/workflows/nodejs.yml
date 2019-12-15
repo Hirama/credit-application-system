@@ -1,26 +1,14 @@
-name: Node CI
+name: Build & Test
 
 on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: 8.x
-
     steps:
       - uses: actions/checkout@v1
-      - name: Use Node.js 8.x
-        uses: actions/setup-node@v1
+      - uses: actions/setup-node@v1
         with:
-          node-version: 8.x
-      - name: npm install, build, and test
-        run: |
-          npm ci
-          ganache-cli
-          npm test
-        env:
-          CI: true
+          node-version: 12
+      - run: npm ci
+      - run: npm test
