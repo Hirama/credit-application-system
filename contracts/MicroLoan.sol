@@ -65,10 +65,12 @@ contract MicroLoan is Ownable {
      * @return true if data was stored
      */
     function loanAccept(bytes32 loanID) public {
+        require(requestedLoans[loanID].borrower == msg.sender);
         require(requestedLoans[loanID].isApproved);
         uint256 withdrawAmount = loans[msg.sender][loanID];
         // prevent re-entrancy attacks
-        loans[msg.sender][loanID] = 0;
+        delete requestedLoans[loanID];
+        delete loans[msg.sender][loanID];
         // withdraw money
         emit RequestAccepted(msg.sender, withdrawAmount, loanID);
         return msg.sender.transfer(withdrawAmount);

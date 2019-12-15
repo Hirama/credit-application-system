@@ -296,6 +296,103 @@ contract("happy path test", async accounts => {
     });
 });
 
-contract("side cases test", async accounts => {
+contract("side cases tests", async accounts => {
+    it("should not accept approved request second time", async () => {
+        let instance = await MicroLoan.deployed();
+        let owner = accounts[0];
+        let borrower = accounts[1];
 
+        let requestAmount = 10;
+        let amountToSend = 10;
+
+        let requestResult = await instance.loanRequest(requestAmount, {from: borrower});
+        truffleAssert.eventEmitted(requestResult, 'AddNewLoanRequest', (ev) => {
+            return ev.borrower === borrower && ev.amount.toNumber() === requestAmount;
+        }, 'AddNewLoanRequest should be emitted with correct parameters');
+
+        let approveResult = await instance.approveRequest(requestResult.logs[0].args.loanID, {
+            from: owner,
+            value: amountToSend
+        });
+        truffleAssert.eventEmitted(approveResult, 'RequestApproved', (ev) => {
+            return ev.borrower === borrower && ev.loanID === requestResult.logs[0].args.loanID && ev.amount.toNumber() === amountToSend;
+        }, 'RequestApproved should be emitted with correct parameters');
+
+        let acceptResult = await instance.loanAccept(requestResult.logs[0].args.loanID, {from: borrower});
+        truffleAssert.eventEmitted(acceptResult, 'RequestAccepted', (ev) => {
+            return ev.borrower === borrower && ev.loanID === requestResult.logs[0].args.loanID && ev.amount.toNumber() === amountToSend;
+        }, 'RequestAccepted should be emitted with correct parameters');
+
+        await truffleAssert.fails(instance.loanAccept(requestResult.logs[0].args.loanID, {from: borrower}), truffleAssert.ErrorType.REVERT);
+    });
+
+    it("should not accept approved request by not borrower", async () => {
+        let instance = await MicroLoan.deployed();
+        let owner = accounts[0];
+        let borrower = accounts[1];
+        let hacker = accounts[2];
+
+        let requestAmount = 10;
+        let amountToSend = 10;
+
+        let requestResult = await instance.loanRequest(requestAmount, {from: borrower});
+        truffleAssert.eventEmitted(requestResult, 'AddNewLoanRequest', (ev) => {
+            return ev.borrower === borrower && ev.amount.toNumber() === requestAmount;
+        }, 'AddNewLoanRequest should be emitted with correct parameters');
+
+        let approveResult = await instance.approveRequest(requestResult.logs[0].args.loanID, {
+            from: owner,
+            value: amountToSend
+        });
+        truffleAssert.eventEmitted(approveResult, 'RequestApproved', (ev) => {
+            return ev.borrower === borrower && ev.loanID === requestResult.logs[0].args.loanID && ev.amount.toNumber() === amountToSend;
+        }, 'RequestApproved should be emitted with correct parameters');
+
+        await truffleAssert.fails(instance.loanAccept(requestResult.logs[0].args.loanID, {from: hacker}), truffleAssert.ErrorType.REVERT);
+    });
+
+    it("should not approve request by not contract owner", async () => {
+        let instance = await MicroLoan.deployed();
+        let owner = accounts[0];
+        let borrower = accounts[1];
+        let hacker = accounts[2];
+
+        let requestAmount = 10;
+        let amountToSend = 10;
+
+        let requestResult = await instance.loanRequest(requestAmount, {from: borrower});
+        truffleAssert.eventEmitted(requestResult, 'AddNewLoanRequest', (ev) => {
+            return ev.borrower === borrower && ev.amount.toNumber() === requestAmount;
+        }, 'AddNewLoanRequest should be emitted with correct parameters');
+
+        truffleAssert.fails(instance.approveRequest(requestResult.logs[0].args.loanID, {
+            from: hacker,
+            value: amountToSend
+        }), truffleAssert.ErrorType.REVERT);
+    });
+
+    it("should not decline request by not contract owner", async () => {
+        let instance = await MicroLoan.deployed();
+        let owner = accounts[0];
+        let borrower = accounts[1];
+        let hacker = accounts[2];
+
+        let requestAmount = 10;
+        let amountToSend = 10;
+
+        let requestResult = await instance.loanRequest(requestAmount, {from: borrower});
+        truffleAssert.eventEmitted(requestResult, 'AddNewLoanRequest', (ev) => {
+            return ev.borrower === borrower && ev.amount.toNumber() === requestAmount;
+        }, 'AddNewLoanRequest should be emitted with correct parameters');
+
+        truffleAssert.passes(instance.approveRequest(requestResult.logs[0].args.loanID, {
+            from: owner,
+            value: amountToSend
+        }), "Should approve request by owner");
+
+        await truffleAssert.fails(
+            instance.declineRequest(requestResult.logs[0].args.loanID, {from: hacker}),
+            truffleAssert.ErrorType.REVERT
+        );
+    });
 });
